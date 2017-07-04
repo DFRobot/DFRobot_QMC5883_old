@@ -1,0 +1,30 @@
+#######################################
+# Syntax Coloring Map - 3-Axis Digital Compass IC
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+DFRobot_QMC5883	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+begin 	KEYWORD2
+readRaw	KEYWORD2
+readNormalize	KEYWORD2
+calibrate	KEYWORD2
+setOffset	KEYWORD2
+setRange  KEYWORD2
+getRange	KEYWORD2
+setMeasurementMode	KEYWORD2
+getMeasurementMode  KEYWORD2
+setDataRate	KEYWORD2
+getDataRate	KEYWORD2
+setSamples	KEYWORD2
+getSamples	KEYWORD2
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
