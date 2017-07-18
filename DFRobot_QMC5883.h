@@ -50,8 +50,8 @@
 #define QMC5883_REG_CONFIG_1         (0x09)
 #define QMC5883_REG_CONFIG_2         (0x0A)
 #define QMC5883_REG_IDENT_B          (0x0B)
-#define QMC5883_REG_IDENT_C          (0x0C)
-#define QMC5883_REG_IDENT_D          (0x0D)
+#define QMC5883_REG_IDENT_C          (0x20)
+#define QMC5883_REG_IDENT_D          (0x21)
 
 
 typedef enum
@@ -127,16 +127,16 @@ struct Vector
 class DFRobot_QMC5883
 {
 public:
-  DFRobot_QMC5883():isHMC(false),isQMC(false)
+  DFRobot_QMC5883():isHMC_(false),isQMC_(false),minX(0),maxX(0),minY(0), maxY(0), minZ(0), maxZ(0),firstRun(true)
     {}
   bool begin(void);
 
   Vector readRaw(void);
   Vector readNormalize(void);
-  void calibrate(int* offX, int* offY);
-
-  void  setOffset(int xo, int yo);
-
+  
+  void initMinMax();
+  void calibrate(void);
+  
   void  setRange(QMC5883_range_t range);
   QMC5883_range_t getRange(void);
 
@@ -149,15 +149,20 @@ public:
   void  setSamples(QMC5883_samples_t samples);
   QMC5883_samples_t getSamples(void);
   int getICType(void);
+  bool isHMC(){return isHMC_;}
+  bool isQMC(){return isQMC_;}
 private:
-
-  bool isHMC;
-  bool isQMC;
+  bool isHMC_;
+  bool isQMC_;
 
   float mgPerDigit;
   Vector v;
-  int xOffset, yOffset;
-
+  
+  
+  float minX, maxX;
+  float minY, maxY;
+  float minZ, maxZ;
+  bool firstRun;
   void writeRegister8(uint8_t reg, uint8_t value);
   uint8_t readRegister8(uint8_t reg);
   uint8_t fastRegister8(uint8_t reg);

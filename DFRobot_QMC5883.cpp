@@ -25,20 +25,20 @@
 bool DFRobot_QMC5883::begin()
 {
   int retry;
-  retry = 3;
+  retry = 5;
   while(retry--){
     Wire.begin();
     Wire.beginTransmission(HMC5883L_ADDRESS);
-    isHMC = (0 == Wire.endTransmission());
-    if(isHMC){
+    isHMC_ = (0 == Wire.endTransmission());
+    if(isHMC_){
       break;
     }
     delay(50);
   }
-  Serial.print("isHMC= ");
-  Serial.println(isHMC);
+  Serial.print("isHMC_= ");
+  Serial.println(isHMC_);
 
-  if(isHMC){
+  if(isHMC_){
     if ((fastRegister8(HMC5883L_REG_IDENT_A) != 0x48)
     || (fastRegister8(HMC5883L_REG_IDENT_B) != 0x34)
     || (fastRegister8(HMC5883L_REG_IDENT_C) != 0x33)){
@@ -52,30 +52,32 @@ bool DFRobot_QMC5883::begin()
     mgPerDigit = 0.92f;
     return true;
   }else{
-    retry = 3;
+    retry = 5;
     while(retry--){
       Wire.begin();
       Wire.beginTransmission(QMC5883_ADDRESS);
-      isQMC = (0 == Wire.endTransmission());
-      if(isHMC){
+      isQMC_ = (0 == Wire.endTransmission());
+      if(isHMC_){
         break;
       }
       delay(50);
     }
-    Serial.print("isQMC= ");
-    Serial.println(isQMC);
-    if(isQMC){
+    Serial.print("isQMC_= ");
+    Serial.println(isQMC_);
+    if(isQMC_){
       if ((fastRegister8(QMC5883_REG_IDENT_B) != 0x00)
-        || (fastRegister8(QMC5883_REG_IDENT_C) != 0x01)
-        || (fastRegister8(QMC5883_REG_IDENT_D) != 0xFF)){
-        return false;
-      }
-    
+        || (fastRegister8(QMC5883_REG_IDENT_C) != 0x0f)
+        || (fastRegister8(QMC5883_REG_IDENT_D) != 0x03)){
+          return false;
+        }
       setRange(QMC5883_RANGE_8GA);
       setMeasurementMode(QMC5883_CONTINOUS);
       setDataRate(QMC5883_DATARATE_50HZ);
       setSamples(QMC5883_SAMPLES_8);
-      mgPerDigit = 4.25f;
+      mgPerDigit = 4.35f;
+      v.XAxis = 0;
+      v.YAxis = 0;
+      v.ZAxis = 0;
       return true;
     }
   }
@@ -84,42 +86,120 @@ bool DFRobot_QMC5883::begin()
 
 Vector DFRobot_QMC5883::readRaw(void)
 {
-  if(isHMC){
-    v.XAxis = readRegister16(HMC5883L_REG_OUT_X_M) - xOffset;
-    v.YAxis = readRegister16(HMC5883L_REG_OUT_Y_M) - yOffset;
-    v.ZAxis = readRegister16(HMC5883L_REG_OUT_Z_M);
-  }else if(isQMC){
-    v.XAxis = readRegister16(QMC5883_REG_OUT_X_M) - xOffset;
-    v.YAxis = readRegister16(QMC5883_REG_OUT_Y_M) - yOffset;
-    v.ZAxis = readRegister16(QMC5883_REG_OUT_Z_M);
+  int range = 20;
+  int Xsum = 0;
+  int Ysum = 0;
+  int Zsum = 0;
+  if(isHMC_){
+    while(range--){
+      v.XAxis = readRegister16(HMC5883L_REG_OUT_X_M);
+      v.YAxis = readRegister16(HMC5883L_REG_OUT_Y_M);
+      v.ZAxis = readRegister16(HMC5883L_REG_OUT_Z_M);
+      calibrate();
+      Xsum += v.XAxis;
+      Ysum += v.YAxis;
+      Zsum += v.ZAxis;
+    }
+    v.XAxis = Xsum/20;
+    v.YAxis = Ysum/20;
+    v.ZAxis = Zsum/20;
+    if(firstRun){
+      initMinMax();
+      firstRun = false;
+    }
+  }else if(isQMC_){
+    while (range--){
+      v.XAxis = readRegister16(QMC5883_REG_OUT_X_M);
+      v.YAxis = readRegister16(QMC5883_REG_OUT_Y_M);
+      v.ZAxis = readRegister16(QMC5883_REG_OUT_Z_M);
+      calibrate();
+      Xsum += v.XAxis;
+      Ysum += v.YAxis;
+      Zsum += v.ZAxis;
+    }
+    v.XAxis = Xsum/20;
+    v.YAxis = Ysum/20;
+    v.ZAxis = Zsum/20;
+    if(firstRun){
+      initMinMax();
+      firstRun = false;
+    }
   }
   return v;
 }
-
+void DFRobot_QMC5883::calibrate()
+{
+  if(v.XAxis < minX ) minX = v.XAxis;
+  if(v.XAxis > maxX ) maxX = v.XAxis;
+  if(v.YAxis < minY ) minY = v.YAxis;
+  if(v.YAxis > maxY ) maxY = v.YAxis;
+  if(v.ZAxis < minZ ) minZ = v.ZAxis;
+  if(v.ZAxis > maxZ ) maxZ = v.ZAxis;
+}
+void DFRobot_QMC5883::initMinMax()
+{
+  minX = v.XAxis;
+  maxX = v.XAxis;
+  minY = v.YAxis;
+  maxY = v.YAxis;
+  minZ = v.ZAxis;
+  maxZ = v.ZAxis;
+}
 Vector DFRobot_QMC5883::readNormalize(void)
 {
-  if(isHMC){
-    v.XAxis = ((float)readRegister16(HMC5883L_REG_OUT_X_M) - xOffset) * mgPerDigit;
-    v.YAxis = ((float)readRegister16(HMC5883L_REG_OUT_Y_M) - yOffset) * mgPerDigit;
-    v.ZAxis = (float)readRegister16(HMC5883L_REG_OUT_Z_M) * mgPerDigit;
+  int range = 2;
+  float Xsum = 0.0;
+  float Ysum = 0.0;
+  float Zsum = 0.0;
+  if(isHMC_){
+    while (range--){
+      v.XAxis = ((float)readRegister16(HMC5883L_REG_OUT_X_M )) * mgPerDigit;
+      v.YAxis = ((float)readRegister16(HMC5883L_REG_OUT_Y_M )) * mgPerDigit;
+      v.ZAxis = (float)readRegister16(HMC5883L_REG_OUT_Z_M) * mgPerDigit;
+      Xsum += v.XAxis;
+      Ysum += v.YAxis;
+      Zsum += v.ZAxis;
+    }
+    v.XAxis = Xsum/range;
+    v.YAxis = Ysum/range;
+    v.ZAxis = Zsum/range;
+    if(firstRun){
+      initMinMax();
+      firstRun = false;
+    }
+    calibrate();
+    v.XAxis= map(v.XAxis,minX,maxX,-360,360);
+    v.YAxis= map(v.YAxis,minY,maxY,-360,360);
+    v.ZAxis= map(v.ZAxis,minZ,maxZ,-360,360);
     return v;
-  }else if(isQMC){
-    v.XAxis = ((float)readRegister16(QMC5883_REG_OUT_X_M) - xOffset) * mgPerDigit;
-    v.YAxis = ((float)readRegister16(QMC5883_REG_OUT_Y_M) - yOffset) * mgPerDigit;
-    v.ZAxis = (float)readRegister16(QMC5883_REG_OUT_Z_M) * mgPerDigit;
+  }else if(isQMC_){
+    while (range--){
+      v.XAxis = ((float)readRegister16(QMC5883_REG_OUT_X_M)) * mgPerDigit;
+      v.YAxis = ((float)readRegister16(QMC5883_REG_OUT_Y_M)) * mgPerDigit;
+      v.ZAxis = (float)readRegister16(QMC5883_REG_OUT_Z_M) * mgPerDigit;
+      Xsum += v.XAxis;
+      Ysum += v.YAxis;
+      Zsum += v.ZAxis;
+    }
+    v.XAxis = Xsum/range;
+    v.YAxis = Ysum/range;
+    v.ZAxis = Zsum/range;
+    if(firstRun){
+      initMinMax();
+      firstRun = false;
+    }
+    
+    calibrate();
+    v.XAxis= map(v.XAxis,minX,maxX,-360,360);
+    v.YAxis= map(v.YAxis,minY,maxY,-360,360);
+    v.ZAxis= map(v.ZAxis,minZ,maxZ,-360,360);
   }
   return v;
-}
-
-void DFRobot_QMC5883::setOffset(int xo, int yo)
-{
-  xOffset = xo;
-  yOffset = yo;
 }
 
 void DFRobot_QMC5883::setRange(QMC5883_range_t range)
 {
-  if(isHMC){
+  if(isHMC_){
     switch(range){
     case HMC5883L_RANGE_0_88GA:
       mgPerDigit = 0.073f;
@@ -158,7 +238,7 @@ void DFRobot_QMC5883::setRange(QMC5883_range_t range)
     }
 
     writeRegister8(HMC5883L_REG_CONFIG_B, range << 5);
-  }else if(isQMC){
+  }else if(isQMC_){
     switch(range)
     {
     case QMC5883_RANGE_2GA:
@@ -177,10 +257,10 @@ void DFRobot_QMC5883::setRange(QMC5883_range_t range)
 
 QMC5883_range_t DFRobot_QMC5883::getRange(void)
 {
-  if(isHMC){
+  if(isHMC_){
     return (QMC5883_range_t)((readRegister8(HMC5883L_REG_CONFIG_B) >> 5));
-  }else if(isQMC){
-    return (QMC5883_range_t)((readRegister8(QMC5883_REG_CONFIG_2) >> 3));
+  }else if(isQMC_){
+    return (QMC5883_range_t)((readRegister8(QMC5883_REG_CONFIG_2) >> 4));
   }
   return QMC5883_RANGE_8GA;
 }
@@ -188,13 +268,13 @@ QMC5883_range_t DFRobot_QMC5883::getRange(void)
 void DFRobot_QMC5883::setMeasurementMode(QMC5883_mode_t mode)
 {
   uint8_t value;
-  if(isHMC){
+  if(isHMC_){
     value = readRegister8(HMC5883L_REG_MODE);
     value &= 0b11111100;
     value |= mode;
 
     writeRegister8(HMC5883L_REG_MODE, value);
-  }else if(isQMC){
+  }else if(isQMC_){
     value = readRegister8(QMC5883_REG_CONFIG_1);
     value &= 0xfc;
     value |= mode;
@@ -206,9 +286,9 @@ void DFRobot_QMC5883::setMeasurementMode(QMC5883_mode_t mode)
 QMC5883_mode_t DFRobot_QMC5883::getMeasurementMode(void)
 {
   uint8_t value=0;
-  if(isHMC){
+  if(isHMC_){
     value = readRegister8(HMC5883L_REG_MODE);
-  }else if(isQMC){
+  }else if(isQMC_){
     value = readRegister8(QMC5883_REG_CONFIG_1); 
   }
   value &= 0b00000011;  
@@ -218,13 +298,13 @@ QMC5883_mode_t DFRobot_QMC5883::getMeasurementMode(void)
 void DFRobot_QMC5883::setDataRate(QMC5883_dataRate_t dataRate)
 {
   uint8_t value;
-  if(isHMC){
+  if(isHMC_){
     value = readRegister8(HMC5883L_REG_CONFIG_A);
     value &= 0b11100011;
     value |= (dataRate << 2);
 
     writeRegister8(HMC5883L_REG_CONFIG_A, value);
-  }else if(isQMC){
+  }else if(isQMC_){
     value = readRegister8(QMC5883_REG_CONFIG_1);
     value &= 0xf3;
     value |= (dataRate << 2);
@@ -236,11 +316,11 @@ void DFRobot_QMC5883::setDataRate(QMC5883_dataRate_t dataRate)
 QMC5883_dataRate_t DFRobot_QMC5883::getDataRate(void)
 {
   uint8_t value=0;
-  if(isHMC){
+  if(isHMC_){
     value = readRegister8(HMC5883L_REG_CONFIG_A);
     value &= 0b00011100;
     value >>= 2;
-  }else if(isQMC){
+  }else if(isQMC_){
     value = readRegister8(QMC5883_REG_CONFIG_1);
     value &= 0b00001100;
     value >>= 2;
@@ -251,12 +331,12 @@ QMC5883_dataRate_t DFRobot_QMC5883::getDataRate(void)
 void DFRobot_QMC5883::setSamples(QMC5883_samples_t samples)
 {
   uint8_t value;
-  if(isHMC){
+  if(isHMC_){
     value = readRegister8(HMC5883L_REG_CONFIG_A);
     value &= 0b10011111;
     value |= (samples << 5);
     writeRegister8(HMC5883L_REG_CONFIG_A, value);
-  }else if(isQMC){
+  }else if(isQMC_){
     value = readRegister8(QMC5883_REG_CONFIG_1);
     value &= 0x3f;
     value |= (samples << 6);
@@ -267,11 +347,11 @@ void DFRobot_QMC5883::setSamples(QMC5883_samples_t samples)
 QMC5883_samples_t DFRobot_QMC5883::getSamples(void)
 {
   uint8_t value=0;
-  if(isHMC){
+  if(isHMC_){
     value = readRegister8(HMC5883L_REG_CONFIG_A);
     value &= 0b01100000;
     value >>= 5;
-  }else if(isQMC){
+  }else if(isQMC_){
     value = readRegister8(QMC5883_REG_CONFIG_1);
     value &= 0x3f;
     value >>= 6;
@@ -282,7 +362,7 @@ QMC5883_samples_t DFRobot_QMC5883::getSamples(void)
 // Write byte to register
 void DFRobot_QMC5883::writeRegister8(uint8_t reg, uint8_t value)
 {
-  if(isHMC){
+  if(isHMC_){
     Wire.beginTransmission(HMC5883L_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -292,7 +372,7 @@ void DFRobot_QMC5883::writeRegister8(uint8_t reg, uint8_t value)
         Wire.send(value);
     #endif
     Wire.endTransmission();
-  }else if(isQMC){
+  }else if(isQMC_){
     Wire.beginTransmission(QMC5883_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -308,7 +388,7 @@ void DFRobot_QMC5883::writeRegister8(uint8_t reg, uint8_t value)
 uint8_t DFRobot_QMC5883::fastRegister8(uint8_t reg)
 {
   uint8_t value=0;
-  if(isHMC){
+  if(isHMC_){
     Wire.beginTransmission(HMC5883L_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -324,7 +404,7 @@ uint8_t DFRobot_QMC5883::fastRegister8(uint8_t reg)
         value = Wire.receive();
     #endif
     Wire.endTransmission();
-  }else if(isQMC){
+  }else if(isQMC_){
     Wire.beginTransmission(QMC5883_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -347,7 +427,7 @@ uint8_t DFRobot_QMC5883::fastRegister8(uint8_t reg)
 uint8_t DFRobot_QMC5883::readRegister8(uint8_t reg)
 {
   uint8_t value=0;
-  if(isHMC){
+  if(isHMC_){
     Wire.beginTransmission(HMC5883L_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -365,7 +445,7 @@ uint8_t DFRobot_QMC5883::readRegister8(uint8_t reg)
         value = Wire.receive();
     #endif
     Wire.endTransmission();
-  }else if(isQMC){
+  }else if(isQMC_){
     Wire.beginTransmission(QMC5883_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -389,7 +469,7 @@ uint8_t DFRobot_QMC5883::readRegister8(uint8_t reg)
 int16_t DFRobot_QMC5883::readRegister16(uint8_t reg)
 {
   int16_t value=0;
-  if(isHMC){
+  if(isHMC_){
     Wire.beginTransmission(HMC5883L_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -409,7 +489,7 @@ int16_t DFRobot_QMC5883::readRegister16(uint8_t reg)
     #endif
     Wire.endTransmission();
     value = vha << 8 | vla;
-  }else if(isQMC){
+  }else if(isQMC_){
     Wire.beginTransmission(QMC5883_ADDRESS);
     #if ARDUINO >= 100
         Wire.write(reg);
@@ -433,29 +513,11 @@ int16_t DFRobot_QMC5883::readRegister16(uint8_t reg)
   return value;
 }
 
-void DFRobot_QMC5883::calibrate(int* offX, int* offY)
-{
-  static int minX = 0;
-  static int maxX = 0;
-  static int minY = 0;
-  static int maxY = 0;
-  Vector mag = readRaw();
-
-  if (mag.XAxis < minX) minX = mag.XAxis;
-  if (mag.XAxis > maxX) maxX = mag.XAxis;
-  if (mag.YAxis < minY) minY = mag.YAxis;
-  if (mag.YAxis > maxY) maxY = mag.YAxis;  
-  
-  *offX = (maxX + minX)/2;
-  *offY = (maxY + minY)/2;  
-  // delay(10000);
-}
-
 int DFRobot_QMC5883::getICType(void)
 {
-  if(isHMC){
+  if(isHMC_){
     return IC_HMC5883L;
-  }else if(isQMC){
+  }else if(isQMC_){
     return IC_QMC5883;
   }else{
     return IC_NONE;

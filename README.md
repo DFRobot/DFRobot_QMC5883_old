@@ -22,13 +22,8 @@ You can read raw data by this function:
 
 ### calibrate
 
-You can calibrate hmc5883l sensor by this function:
-    void calibrate(int* offX, int* offY);
-
-
-### set offset by calibrate data
-
-    void  setOffset(int xo, int yo);
+In this version optimization, calibration will be removed and calibrated when used.
+When the compass program runs, please spin QMC5883 freely to accomplish calibration.
 
 
 * @n [Get the module here](等上架后添加商品购买链接)
