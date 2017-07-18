@@ -18,7 +18,9 @@ You can read raw data by this function:
 ### read Normalize data
 
 You can read raw data by this function:
+
     Vector readNormalize(void);
+
 
 ### calibrate
 
