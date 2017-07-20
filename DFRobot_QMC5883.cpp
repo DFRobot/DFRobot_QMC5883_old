@@ -26,6 +26,7 @@ bool DFRobot_QMC5883::begin()
 {
   int retry;
   retry = 5;
+  
   while(retry--){
     Wire.begin();
     Wire.beginTransmission(HMC5883L_ADDRESS);
@@ -33,7 +34,7 @@ bool DFRobot_QMC5883::begin()
     if(isHMC_){
       break;
     }
-    delay(50);
+    delay(20);
   }
   Serial.print("isHMC_= ");
   Serial.println(isHMC_);
@@ -60,24 +61,25 @@ bool DFRobot_QMC5883::begin()
       if(isHMC_){
         break;
       }
-      delay(50);
+      delay(20);
     }
     Serial.print("isQMC_= ");
     Serial.println(isQMC_);
     if(isQMC_){
-      if ((fastRegister8(QMC5883_REG_IDENT_B) != 0x00)
-        || (fastRegister8(QMC5883_REG_IDENT_C) != 0x0f)
-        || (fastRegister8(QMC5883_REG_IDENT_D) != 0x03)){
-          return false;
-        }
+      writeRegister8(QMC5883_REG_IDENT_B,0X01);
+      writeRegister8(QMC5883_REG_IDENT_C,0X40);
+      writeRegister8(QMC5883_REG_IDENT_D,0X01);
+      writeRegister8(QMC5883_REG_CONFIG_1,0X1D);
+      if ((fastRegister8(QMC5883_REG_IDENT_B) != 0x01)
+      || (fastRegister8(QMC5883_REG_IDENT_C) != 0x40)
+      || (fastRegister8(QMC5883_REG_IDENT_D) != 0x01)){
+        return false;
+      }
       setRange(QMC5883_RANGE_8GA);
       setMeasurementMode(QMC5883_CONTINOUS);
       setDataRate(QMC5883_DATARATE_50HZ);
       setSamples(QMC5883_SAMPLES_8);
       mgPerDigit = 4.35f;
-      v.XAxis = 0;
-      v.YAxis = 0;
-      v.ZAxis = 0;
       return true;
     }
   }
@@ -86,10 +88,10 @@ bool DFRobot_QMC5883::begin()
 
 Vector DFRobot_QMC5883::readRaw(void)
 {
-  int range = 20;
-  int Xsum = 0;
-  int Ysum = 0;
-  int Zsum = 0;
+  int range = 10;
+  float Xsum = 0.0;
+  float Ysum = 0.0;
+  float Zsum = 0.0;
   if(isHMC_){
     while(range--){
       v.XAxis = readRegister16(HMC5883L_REG_OUT_X_M);
@@ -100,9 +102,9 @@ Vector DFRobot_QMC5883::readRaw(void)
       Ysum += v.YAxis;
       Zsum += v.ZAxis;
     }
-    v.XAxis = Xsum/20;
-    v.YAxis = Ysum/20;
-    v.ZAxis = Zsum/20;
+    v.XAxis = Xsum/range;
+    v.YAxis = Ysum/range;
+    v.ZAxis = Zsum/range;
     if(firstRun){
       initMinMax();
       firstRun = false;
@@ -117,9 +119,9 @@ Vector DFRobot_QMC5883::readRaw(void)
       Ysum += v.YAxis;
       Zsum += v.ZAxis;
     }
-    v.XAxis = Xsum/20;
-    v.YAxis = Ysum/20;
-    v.ZAxis = Zsum/20;
+    v.XAxis = Xsum/range;
+    v.YAxis = Ysum/range;
+    v.ZAxis = Zsum/range;
     if(firstRun){
       initMinMax();
       firstRun = false;
@@ -147,7 +149,7 @@ void DFRobot_QMC5883::initMinMax()
 }
 Vector DFRobot_QMC5883::readNormalize(void)
 {
-  int range = 2;
+  int range = 10;
   float Xsum = 0.0;
   float Ysum = 0.0;
   float Zsum = 0.0;
