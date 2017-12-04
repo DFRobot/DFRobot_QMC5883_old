@@ -51,7 +51,7 @@ void loop()
   // You can find your declination on: http://magnetic-declination.com/
   // (+) Positive or (-) for negative
   // For Bytom / Poland declination angle is 4'26E (positive)
-  // Formula: (deg + (min / 60.0)) / (180 / M_PI);
+  // Formula: (deg + (min / 60.0)) / (180 / PI);
   float declinationAngle = (4.0 + (26.0 / 60.0)) / (180 / PI);
   heading += declinationAngle;
 
@@ -65,7 +65,7 @@ void loop()
   }
 
   // Convert to degrees
-  float headingDegrees = heading * 180/M_PI; 
+  float headingDegrees = heading * 180/PI; 
 
   // Output
   Serial.print(" Heading = ");
