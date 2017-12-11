@@ -88,7 +88,8 @@ bool DFRobot_QMC5883::begin()
 
 Vector DFRobot_QMC5883::readRaw(void)
 {
-  int range = 10;
+  int repcount = 10;
+  int range = repcount;
   float Xsum = 0.0;
   float Ysum = 0.0;
   float Zsum = 0.0;
@@ -102,9 +103,9 @@ Vector DFRobot_QMC5883::readRaw(void)
       Ysum += v.YAxis;
       Zsum += v.ZAxis;
     }
-    v.XAxis = Xsum/range;
-    v.YAxis = Ysum/range;
-    v.ZAxis = Zsum/range;
+    v.XAxis = Xsum/repcount;
+    v.YAxis = Ysum/repcount;
+    v.ZAxis = Zsum/repcount;
     if(firstRun){
       initMinMax();
       firstRun = false;
@@ -119,9 +120,9 @@ Vector DFRobot_QMC5883::readRaw(void)
       Ysum += v.YAxis;
       Zsum += v.ZAxis;
     }
-    v.XAxis = Xsum/range;
-    v.YAxis = Ysum/range;
-    v.ZAxis = Zsum/range;
+    v.XAxis = Xsum/repcount;
+    v.YAxis = Ysum/repcount;
+    v.ZAxis = Zsum/repcount;
     if(firstRun){
       initMinMax();
       firstRun = false;
@@ -149,7 +150,8 @@ void DFRobot_QMC5883::initMinMax()
 }
 Vector DFRobot_QMC5883::readNormalize(void)
 {
-  int range = 10;
+  int repcount = 10;
+  int range = repcount;
   float Xsum = 0.0;
   float Ysum = 0.0;
   float Zsum = 0.0;
@@ -162,9 +164,9 @@ Vector DFRobot_QMC5883::readNormalize(void)
       Ysum += v.YAxis;
       Zsum += v.ZAxis;
     }
-    v.XAxis = Xsum/range;
-    v.YAxis = Ysum/range;
-    v.ZAxis = Zsum/range;
+    v.XAxis = Xsum/repcount;
+    v.YAxis = Ysum/repcount;
+    v.ZAxis = Zsum/repcount;
     if(firstRun){
       initMinMax();
       firstRun = false;
@@ -183,9 +185,9 @@ Vector DFRobot_QMC5883::readNormalize(void)
       Ysum += v.YAxis;
       Zsum += v.ZAxis;
     }
-    v.XAxis = Xsum/range;
-    v.YAxis = Ysum/range;
-    v.ZAxis = Zsum/range;
+    v.XAxis = Xsum/repcount;
+    v.YAxis = Ysum/repcount;
+    v.ZAxis = Zsum/repcount;
     if(firstRun){
       initMinMax();
       firstRun = false;
