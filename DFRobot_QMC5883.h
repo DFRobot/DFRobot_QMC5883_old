@@ -20,9 +20,18 @@
 #include "WProgram.h"
 #endif
 
+
+
 #define HMC5883L_ADDRESS             (0x1E)
 #define QMC5883_ADDRESS              (0x0D)
+#define VCM5883L_ADDRESS              (0x0C)
 
+
+#define IC_NONE     0
+#define IC_HMC5883L 1
+#define IC_QMC5883  2
+#define IC_VCM5883L 3
+#define IC_ERROR    4
 
 
 #define HMC5883L_REG_CONFIG_A         (0x00)
@@ -54,6 +63,16 @@
 #define QMC5883_REG_IDENT_D          (0x21)
 
 
+#define VCM5883L_REG_OUT_X_L          (0x00)
+#define VCM5883L_REG_OUT_X_H          (0x01)
+#define VCM5883L_REG_OUT_Y_L          (0x02)
+#define VCM5883L_REG_OUT_Y_H          (0x03)
+#define VCM5883L_REG_OUT_Z_L          (0x04)
+#define VCM5883L_REG_OUT_Z_H          (0x05)
+#define VCM5883L_CTR_REG1             (0x0B)
+#define VCM5883L_CTR_REG2             (0x0A)
+
+
 typedef enum
 {
   HMC5883L_SAMPLES_8    = 0b11,
@@ -80,7 +99,12 @@ typedef enum
   QMC5883_DATARATE_10HZ        = 0b00,
   QMC5883_DATARATE_50HZ        = 0b01,
   QMC5883_DATARATE_100HZ       = 0b10,
-  QMC5883_DATARATE_200HZ       = 0b11
+  QMC5883_DATARATE_200HZ       = 0b11,
+
+  VCM5883L_DATARATE_200HZ      = 0b00,
+  VCM5883L_DATARATE_100HZ      = 0b01,
+  VCM5883L_DATARATE_50HZ       = 0b10,
+  VCM5883L_DATARATE_10HZ       = 0b11
 } QMC5883_dataRate_t;
 
 typedef enum
@@ -95,7 +119,9 @@ typedef enum
   HMC5883L_RANGE_0_88GA    = 0b000,
 
   QMC5883_RANGE_2GA     = 0b00,
-  QMC5883_RANGE_8GA     = 0b01
+  QMC5883_RANGE_8GA     = 0b01,
+
+  VCM5883L_RANGE_8GA     = 0b01,
 } QMC5883_range_t;
 
 typedef enum
@@ -105,12 +131,13 @@ typedef enum
   HMC5883L_CONTINOUS    = 0b00,
 
   QMC5883_SINGLE        = 0b00,
-  QMC5883_CONTINOUS     = 0b01
+  QMC5883_CONTINOUS     = 0b01,
+
+  VCM5883L_SINGLE        = 0b0,
+  VCM5883L_CONTINOUS     = 0b1,
 } QMC5883_mode_t;
 
-#define IC_NONE     0
-#define IC_HMC5883L 1
-#define IC_QMC5883  2
+
 
 
 
@@ -118,9 +145,13 @@ typedef enum
 #define VECTOR_STRUCT_H
 struct Vector
 {
-  float XAxis;
-  float YAxis;
-  float ZAxis;
+  int16_t XAxis;
+  int16_t YAxis;
+  int16_t ZAxis;
+  float   AngleXY;
+  float   AngleXZ;
+  float   AngleYZ;
+  float   HeadingDegress;
 };
 #endif
 
@@ -132,7 +163,6 @@ public:
   bool begin(void);
 
   Vector readRaw(void);
-  Vector readNormalize(void);
   
   void initMinMax();
   void calibrate(void);
@@ -148,14 +178,22 @@ public:
 
   void  setSamples(QMC5883_samples_t samples);
   QMC5883_samples_t getSamples(void);
+
+  void setDeclinationAngle(float declinationAngle);
+  void getHeadingDegrees();
+  float ICdeclinationAngle;
+  int ICType = IC_NONE;
+  uint8_t ICAddr = HMC5883L_ADDRESS;
   int getICType(void);
-  bool isHMC(){return isHMC_;}
-  bool isQMC(){return isQMC_;}
+  bool isHMC(){if(ICType == IC_HMC5883L ){return true;}return false;}
+  bool isQMC(){if(ICType == IC_QMC5883 ){return true;}return false;}
+  bool isVCM(){if(ICType == IC_VCM5883L ){return true;}return false;}
 private:
   bool isHMC_;
   bool isQMC_;
 
   float mgPerDigit;
+  float Gauss_LSB_XY = 1090.0; 
   Vector v;
   
   

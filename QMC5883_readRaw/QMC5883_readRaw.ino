@@ -16,13 +16,6 @@
 
 DFRobot_QMC5883 compass;
 
-int minX = 0;
-int maxX = 0;
-int minY = 0;
-int maxY = 0;
-int offX = 0;
-int offY = 0;
-
 void setup()
 {
   Serial.begin(115200);
@@ -34,25 +27,32 @@ void setup()
   }
   if(compass.isHMC() ){
     Serial.println("Initialize HMC5883");
-    compass.setRange(HMC5883L_RANGE_1_3GA);
-    compass.setMeasurementMode(HMC5883L_CONTINOUS);
-    compass.setDataRate(HMC5883L_DATARATE_15HZ);
-    compass.setSamples(HMC5883L_SAMPLES_8);
+    //compass.setRange(HMC5883L_RANGE_1_3GA);
+    //compass.setMeasurementMode(HMC5883L_CONTINOUS);
+    //compass.setDataRate(HMC5883L_DATARATE_15HZ);
+    //compass.setSamples(HMC5883L_SAMPLES_8);
   }else if(compass.isQMC()){
     Serial.println("Initialize QMC5883");
-    compass.setRange(QMC5883_RANGE_2GA);
-    compass.setMeasurementMode(QMC5883_CONTINOUS); 
-    compass.setDataRate(QMC5883_DATARATE_50HZ);
-    compass.setSamples(QMC5883_SAMPLES_8);
+    //compass.setRange(QMC5883_RANGE_2GA);
+    //compass.setMeasurementMode(QMC5883_CONTINOUS); 
+    //compass.setDataRate(QMC5883_DATARATE_50HZ);
+    //compass.setSamples(QMC5883_SAMPLES_8);
+  }else if(compass.isVCM()){
+    Serial.println("Initialize VCM5883L");
+    //compass.setMeasurementMode(VCM5883L_CONTINOUS); 
+    //compass.setDataRate(VCM5883L_DATARATE_200HZ);
   }
+  delay(1000);
 }
 
 void loop()
 {
   Vector mag = compass.readRaw();
+  Serial.print("X:");
   Serial.print(mag.XAxis);
-  Serial.print(":");
+  Serial.print(" Y:");
   Serial.print(mag.YAxis);
-  Serial.print(":");
+  Serial.print(" Z:");
   Serial.println(mag.ZAxis);
+  delay(100);
 }
